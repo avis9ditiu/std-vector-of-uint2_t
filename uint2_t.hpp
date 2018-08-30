@@ -8,29 +8,14 @@
 #include <boost/compressed_pair.hpp>
 #include <algorithm>
 #include <cassert>
+#include <vector>
 
-namespace hew
+namespace std
 {
-
-typedef std::uint8_t uint2_t;
-
-template <typename InputIterator>
-inline constexpr bool __is_input_iterator_v =
-        std::is_convertible_v<typename std::iterator_traits<InputIterator>::iterator_category,
-                std::input_iterator_tag>;
-
-template <typename ForwardIterator>
-inline constexpr bool __is_forward_iterator_v =
-        std::is_convertible_v<typename std::iterator_traits<ForwardIterator>::iterator_category,
-                std::forward_iterator_tag>;
-
-template <typename Alloc, typename Traits = std::allocator_traits<Alloc>>
-inline constexpr bool __is_noexcept_move_assign_container_v =
-        Traits::propagate_on_container_move_assignment::value || Traits::is_always_equal::value;
-
+    typedef uint8_t uint2_t;
 }
 
-namespace hew
+namespace detail
 {
 
 template <class Cp, bool IsConst> class __uint2_iterator;
@@ -50,13 +35,13 @@ class __uint2_reference
     friend class __uint2_const_reference<Cp>;
     friend class __uint2_iterator<Cp, false>;
 public:
-    operator uint2_t() const noexcept
-    { return static_cast<uint2_t> (*seg_ >> shift_ & 3); }
+    operator std::uint2_t() const noexcept
+    { return static_cast<std::uint2_t> (*seg_ >> shift_ & 3); }
 
-    uint2_t operator~() const noexcept
-    { return static_cast<uint2_t>((*seg_ >> shift_ ^ 3) & 3); }
+    std::uint2_t operator~() const noexcept
+    { return static_cast<std::uint2_t>((*seg_ >> shift_ ^ 3) & 3); }
 
-    __uint2_reference& operator=(uint2_t x) noexcept
+    __uint2_reference& operator=(std::uint2_t x) noexcept
     {
         *seg_ &= ~(__storage_type(3) << shift_);
         *seg_ |=   __storage_type(x) << shift_;
@@ -64,7 +49,7 @@ public:
     }
 
     __uint2_reference& operator=(const __uint2_reference& x) noexcept
-    { return operator=(static_cast<uint2_t>(x)); }
+    { return operator=(static_cast<std::uint2_t>(x)); }
 
     void flip() noexcept {*seg_ ^= (__storage_type(3) << shift_);}
     __uint2_iterator<Cp, false> operator&() const noexcept
@@ -90,8 +75,8 @@ public:
     __uint2_const_reference(const __uint2_reference<Cp>& x) noexcept
         : seg_(x.seg_), shift_(x.shift_) {}
 
-    operator uint2_t() const noexcept
-    { return static_cast<uint2_t>(*seg_ >> shift_ & 3); }
+    operator std::uint2_t() const noexcept
+    { return static_cast<std::uint2_t>(*seg_ >> shift_ & 3); }
 
     __uint2_iterator<Cp, true> operator&() const noexcept
     { return __uint2_iterator<Cp, true>(seg_, shift_ / 2); }
@@ -108,7 +93,7 @@ class __uint2_iterator
 {
 public:
     typedef typename Cp::difference_type                                difference_type;
-    typedef uint2_t                                                     value_type;
+    typedef std::uint2_t                                                value_type;
     typedef __uint2_iterator                                            pointer;
     typedef std::conditional_t<IsConst, __uint2_const_reference<Cp>, 
                                         __uint2_reference<Cp>>          reference;
@@ -118,7 +103,7 @@ private:
     typedef typename Cp::__storage_type                                 __storage_type;
     typedef std::conditional_t<IsConst, typename Cp::__const_storage_pointer,
                                         typename Cp::__storage_pointer> __storage_pointer;
-    static const unsigned bases_per_word = Cp::bases_per_word;
+    static const unsigned uint2_per_word = Cp::uint2_per_word;
 
     __storage_pointer seg_;
     unsigned          pos_;
@@ -136,7 +121,7 @@ public:
 
     __uint2_iterator& operator++()
     {
-        if (pos_ != bases_per_word - 1)
+        if (pos_ != uint2_per_word - 1)
             ++pos_;
         else
         {
@@ -159,7 +144,7 @@ public:
             --pos_;
         else
         {
-            pos_ = bases_per_word - 1;
+            pos_ = uint2_per_word - 1;
             --seg_;
         }
         return *this;
@@ -175,12 +160,12 @@ public:
     __uint2_iterator& operator+=(difference_type n)
     {
         if (n >= 0)
-            seg_ += (n + pos_) / bases_per_word;
+            seg_ += (n + pos_) / uint2_per_word;
         else
-            seg_ += static_cast<difference_type>(n - bases_per_word + pos_ + 1)
-                    / static_cast<difference_type>(bases_per_word);
-        n &= (bases_per_word - 1);
-        pos_ = static_cast<unsigned>((n + pos_) % bases_per_word);
+            seg_ += static_cast<difference_type>(n - uint2_per_word + pos_ + 1)
+                  / static_cast<difference_type>(uint2_per_word);
+        n &= (uint2_per_word - 1);
+        pos_ = static_cast<unsigned>((n + pos_) % uint2_per_word);
         return *this;
     }
 
@@ -206,7 +191,7 @@ public:
     friend __uint2_iterator operator+(difference_type n, const __uint2_iterator& it) { return it + n; }
 
     friend difference_type operator-(const __uint2_iterator& x, const __uint2_iterator& y)
-    { return (x.seg_ - y.seg_) * bases_per_word + x.pos_ - y.pos_; }
+    { return (x.seg_ - y.seg_) * uint2_per_word + x.pos_ - y.pos_; }
 
     reference operator[](difference_type n) const { return *(*this + n); }
 
@@ -243,7 +228,7 @@ template <class Cp>
 void
 swap(__uint2_reference<Cp> x, __uint2_reference<Cp> y) noexcept
 {
-    uint2_t t = x;
+    std::uint2_t t = x;
     x = y;
     y = t;
 }
@@ -252,23 +237,23 @@ template <class Cp, class Dp>
 void
 swap(__uint2_reference<Cp> x, __uint2_reference<Dp> y) noexcept
 {
-    uint2_t t = x;
+    std::uint2_t t = x;
     x = y;
     y = t;
 }
 
 template <class Cp>
 void
-swap(__uint2_reference<Cp> x, uint2_t& y) noexcept
+swap(__uint2_reference<Cp> x, std::uint2_t& y) noexcept
 {
-    uint2_t t = x;
+    std::uint2_t t = x;
     x = y;
     y = t;
 }
 
 }
 
-namespace hew
+namespace detail
 {
 
 template <bool>
@@ -296,23 +281,42 @@ __vector_base_common<b>::__throw_out_of_range() const
 
 }
 
+namespace detail
+{
+
+template <typename InputIterator>
+inline constexpr bool __is_input_iterator_v =
+        std::is_convertible_v<typename std::iterator_traits<InputIterator>::iterator_category,
+                std::input_iterator_tag>;
+
+template <typename ForwardIterator>
+inline constexpr bool __is_forward_iterator_v =
+        std::is_convertible_v<typename std::iterator_traits<ForwardIterator>::iterator_category,
+                std::forward_iterator_tag>;
+
+template <typename Alloc, typename Traits = std::allocator_traits<Alloc>>
+inline constexpr bool __is_noexcept_move_assign_container_v =
+        Traits::propagate_on_container_move_assignment::value || Traits::is_always_equal::value;
+
+}
+
 namespace std
 {
 
 template <class Allocator>
-class vector<hew::uint2_t, Allocator>
-    : private hew::__vector_base_common<true>
+class vector<uint2_t, Allocator>
+    : private detail::__vector_base_common<true>
 {
 public:
     typedef vector                                   __self;
-    typedef hew::uint2_t                             value_type;
+    typedef uint2_t                                  value_type;
     typedef Allocator                                allocator_type;
     typedef std::allocator_traits<allocator_type>    __alloc_traits;
     typedef typename __alloc_traits::size_type       size_type;
     typedef typename __alloc_traits::difference_type difference_type;
     typedef size_type                                __storage_type;
-    typedef hew::__uint2_iterator<vector, false>     pointer;
-    typedef hew::__uint2_iterator<vector, true>      const_pointer;
+    typedef detail::__uint2_iterator<vector, false>  pointer;
+    typedef detail::__uint2_iterator<vector, true>   const_pointer;
     typedef pointer                                  iterator;
     typedef const_pointer                            const_iterator;
     typedef std::reverse_iterator<iterator>          reverse_iterator;
@@ -328,8 +332,8 @@ private:
     size_type                                              size_;
     boost::compressed_pair<size_type, __storage_allocator> cap_alloc_;
 public:
-    typedef hew::__uint2_reference      <vector> reference;
-    typedef hew::__uint2_const_reference<vector> const_reference;
+    typedef detail::__uint2_reference      <vector> reference;
+    typedef detail::__uint2_const_reference<vector> const_reference;
 private:
     size_type& __cap() noexcept
     { return cap_alloc_.first(); }
@@ -343,13 +347,13 @@ private:
     const __storage_allocator& __alloc() const noexcept
     { return cap_alloc_.second(); }
 
-    static const unsigned bases_per_word = static_cast<unsigned>(sizeof(__storage_type) * CHAR_BIT / 2);
+    static const unsigned uint2_per_word = static_cast<unsigned>(sizeof(__storage_type) * CHAR_BIT / 2);
 
     static size_type __internal_cap_to_external(size_type n) noexcept
-    { return n * bases_per_word; }
+    { return n * uint2_per_word; }
 
     static size_type __external_cap_to_internal(size_type n) noexcept
-    { return (n - 1) / bases_per_word + 1; }
+    { return (n - 1) / uint2_per_word + 1; }
 
 public:
     vector() noexcept(std::is_nothrow_default_constructible_v<allocator_type>);
@@ -362,18 +366,18 @@ public:
     vector(size_type n, const value_type& x, const allocator_type& a);
     template <class InputIterator>
     vector(InputIterator first, InputIterator last,
-           std::enable_if_t<hew::__is_input_iterator_v  <InputIterator> &&
-                           !hew::__is_forward_iterator_v<InputIterator>>* = 0);
+           std::enable_if_t<detail::__is_input_iterator_v  <InputIterator> &&
+                           !detail::__is_forward_iterator_v<InputIterator>>* = 0);
     template <class InputIterator>
     vector(InputIterator first, InputIterator last, const allocator_type& a,
-           std::enable_if_t<hew::__is_input_iterator_v  <InputIterator> &&
-                           !hew::__is_forward_iterator_v<InputIterator>>* = 0);
+           std::enable_if_t<detail::__is_input_iterator_v  <InputIterator> &&
+                           !detail::__is_forward_iterator_v<InputIterator>>* = 0);
     template <class ForwardIterator>
     vector(ForwardIterator first, ForwardIterator last,
-           std::enable_if_t<hew::__is_forward_iterator_v<ForwardIterator>>* = 0);
+           std::enable_if_t<detail::__is_forward_iterator_v<ForwardIterator>>* = 0);
     template <class ForwardIterator>
     vector(ForwardIterator first, ForwardIterator last, const allocator_type& a,
-           std::enable_if_t<hew::__is_forward_iterator_v<ForwardIterator>>* = 0);
+           std::enable_if_t<detail::__is_forward_iterator_v<ForwardIterator>>* = 0);
 
     vector(const vector& v);
     vector(const vector& v, const allocator_type& a);
@@ -385,7 +389,7 @@ public:
     vector(vector&& v) noexcept;
     vector(vector&& v, const allocator_type& a);
     vector& operator=(vector&& v)
-    noexcept((hew::__is_noexcept_move_assign_container_v<Allocator, __alloc_traits>));
+    noexcept((detail::__is_noexcept_move_assign_container_v<Allocator, __alloc_traits>));
 
     vector& operator=(std::initializer_list<value_type> il)
     { assign(il.begin(), il.end()); return *this; }
@@ -393,14 +397,14 @@ public:
     template <class InputIterator>
     std::enable_if_t
     <
-        hew::__is_input_iterator_v  <InputIterator> &&
-       !hew::__is_forward_iterator_v<InputIterator>
+        detail::__is_input_iterator_v  <InputIterator> &&
+       !detail::__is_forward_iterator_v<InputIterator>
     >
     assign(InputIterator first, InputIterator last);
     template <class ForwardIterator>
     std::enable_if_t
     <
-        hew::__is_forward_iterator_v<ForwardIterator>
+        detail::__is_forward_iterator_v<ForwardIterator>
     >
     assign(ForwardIterator first, ForwardIterator last);
 
@@ -489,15 +493,15 @@ public:
     template <class InputIterator>
     std::enable_if_t
     <
-        hew::__is_input_iterator_v  <InputIterator> &&
-       !hew::__is_forward_iterator_v<InputIterator>,
+        detail::__is_input_iterator_v  <InputIterator> &&
+       !detail::__is_forward_iterator_v<InputIterator>,
         iterator
     >
     insert(const_iterator position, InputIterator first, InputIterator last);
     template <class ForwardIterator>
     std::enable_if_t
     <
-        hew::__is_forward_iterator_v<ForwardIterator>,
+        detail::__is_forward_iterator_v<ForwardIterator>,
         iterator
     >
     insert(const_iterator position, ForwardIterator first, ForwardIterator last);
@@ -508,11 +512,11 @@ public:
     iterator erase(const_iterator position);
     iterator erase(const_iterator first, const_iterator last);
 
-    void clear() noexcept {size_ = 0;}
+    void clear() noexcept { size_ = 0; }
 
     void swap(vector&) noexcept;
 
-    static void swap(reference x, reference y) noexcept { hew::swap(x, y); }
+    static void swap(reference x, reference y) noexcept { detail::swap(x, y); }
 
     void resize(size_type sz, value_type x = 0);
     void flip() noexcept;
@@ -525,27 +529,27 @@ private:
     void __vdeallocate() noexcept;
 
     static size_type __align_it(size_type new_size) noexcept
-    { return new_size + (bases_per_word-1) & ~((size_type)bases_per_word-1); }
+    { return new_size + (uint2_per_word-1) & ~((size_type)uint2_per_word-1); }
     size_type __recommend(size_type new_size) const;
     void __construct_at_end(size_type n, value_type x);
     template <class ForwardIterator>
     std::enable_if_t
     <
-        hew::__is_forward_iterator_v<ForwardIterator>
+        detail::__is_forward_iterator_v<ForwardIterator>
     >
     __construct_at_end(ForwardIterator first, ForwardIterator last);
 
     reference __make_ref(size_type pos) noexcept
-    { return reference(begin_ + pos / bases_per_word, static_cast<unsigned>(pos % bases_per_word)); }
+    { return reference(begin_ + pos / uint2_per_word, static_cast<unsigned>(pos % uint2_per_word)); }
 
     const_reference __make_ref(size_type pos) const noexcept
-    { return const_reference(begin_ + pos / bases_per_word, static_cast<unsigned>(pos % bases_per_word)); }
+    { return const_reference(begin_ + pos / uint2_per_word, static_cast<unsigned>(pos % uint2_per_word)); }
 
     iterator __make_iter(size_type pos) noexcept
-    { return iterator(begin_ + pos / bases_per_word, static_cast<unsigned>(pos % bases_per_word)); }
+    { return iterator(begin_ + pos / uint2_per_word, static_cast<unsigned>(pos % uint2_per_word)); }
 
     const_iterator __make_iter(size_type pos) const noexcept
-    { return const_iterator(begin_ + pos / bases_per_word, static_cast<unsigned>(pos % bases_per_word)); }
+    { return const_iterator(begin_ + pos / uint2_per_word, static_cast<unsigned>(pos % uint2_per_word)); }
 
     iterator __const_iterator_cast(const_iterator p) noexcept
     { return begin() + (p - cbegin());}
@@ -580,17 +584,17 @@ private:
         __alloc() = std::move(c.__alloc());
     }
 
-    void __move_assign_alloc(vector&, std::false_type)noexcept {}
+    void __move_assign_alloc(vector&, std::false_type) noexcept {}
 
-    friend class hew::__uint2_reference<vector>;
-    friend class hew::__uint2_const_reference<vector>;
-    friend class hew::__uint2_iterator<vector, false>;
-    friend class hew::__uint2_iterator<vector, true>;
+    friend class detail::__uint2_reference<vector>;
+    friend class detail::__uint2_const_reference<vector>;
+    friend class detail::__uint2_iterator<vector, false>;
+    friend class detail::__uint2_iterator<vector, true>;
 };
 
 template <class Allocator>
 void
-vector<hew::uint2_t, Allocator>::__invalidate_all_iterators()
+vector<uint2_t, Allocator>::__invalidate_all_iterators()
 {
 }
 
@@ -603,7 +607,7 @@ vector<hew::uint2_t, Allocator>::__invalidate_all_iterators()
 //  Postcondition:  size() == 0
 template <class Allocator>
 void
-vector<hew::uint2_t, Allocator>::__vallocate(size_type n)
+vector<uint2_t, Allocator>::__vallocate(size_type n)
 {
     if (n > max_size())
         this->__throw_length_error();
@@ -615,7 +619,7 @@ vector<hew::uint2_t, Allocator>::__vallocate(size_type n)
 
 template <class Allocator>
 void
-vector<hew::uint2_t, Allocator>::__vdeallocate() noexcept
+vector<uint2_t, Allocator>::__vdeallocate() noexcept
 {
     if (this->begin_ != nullptr)
     {
@@ -627,20 +631,20 @@ vector<hew::uint2_t, Allocator>::__vdeallocate() noexcept
 }
 
 template <class Allocator>
-typename vector<hew::uint2_t, Allocator>::size_type
-vector<hew::uint2_t, Allocator>::max_size() const noexcept
+typename vector<uint2_t, Allocator>::size_type
+vector<uint2_t, Allocator>::max_size() const noexcept
 {
     size_type amax = __storage_traits::max_size(__alloc());
     size_type nmax = std::numeric_limits<size_type>::max() / 2;  // end() >= begin(), always
-    if (nmax / bases_per_word <= amax)
+    if (nmax / uint2_per_word <= amax)
         return nmax;
     return __internal_cap_to_external(amax);
 }
 
 //  Precondition:  new_size > capacity()
 template <class Allocator>
-typename vector<hew::uint2_t, Allocator>::size_type
-vector<hew::uint2_t, Allocator>::__recommend(size_type new_size) const
+typename vector<uint2_t, Allocator>::size_type
+vector<uint2_t, Allocator>::__recommend(size_type new_size) const
 {
     const size_type ms = max_size();
     if (new_size > ms)
@@ -657,7 +661,7 @@ vector<hew::uint2_t, Allocator>::__recommend(size_type new_size) const
 //  Postcondition:  size() == size() + n
 template <class Allocator>
 void
-vector<hew::uint2_t, Allocator>::__construct_at_end(size_type n, value_type x)
+vector<uint2_t, Allocator>::__construct_at_end(size_type n, value_type x)
 {
     size_type old_size = this->size_;
     this->size_ += n;
@@ -668,9 +672,9 @@ template <class Allocator>
 template <class ForwardIterator>
 std::enable_if_t
 <
-    hew::__is_forward_iterator_v<ForwardIterator>
+    detail::__is_forward_iterator_v<ForwardIterator>
 >
-vector<hew::uint2_t, Allocator>::__construct_at_end(ForwardIterator first, ForwardIterator last)
+vector<uint2_t, Allocator>::__construct_at_end(ForwardIterator first, ForwardIterator last)
 {
     size_type old_size = this->size_;
     this->size_ += std::distance(first, last);
@@ -678,7 +682,7 @@ vector<hew::uint2_t, Allocator>::__construct_at_end(ForwardIterator first, Forwa
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>::vector()
+vector<uint2_t, Allocator>::vector()
 noexcept(std::is_nothrow_default_constructible_v<allocator_type>)
     : begin_    (nullptr),
       size_     (0),
@@ -687,7 +691,7 @@ noexcept(std::is_nothrow_default_constructible_v<allocator_type>)
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>::vector(const allocator_type& a) noexcept
+vector<uint2_t, Allocator>::vector(const allocator_type& a) noexcept
     : begin_    (nullptr),
       size_     (0),
       cap_alloc_(0, static_cast<__storage_allocator>(a))
@@ -695,7 +699,7 @@ vector<hew::uint2_t, Allocator>::vector(const allocator_type& a) noexcept
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>::vector(size_type n)
+vector<uint2_t, Allocator>::vector(size_type n)
     : begin_    (nullptr),
       size_     (0),
       cap_alloc_(0)
@@ -708,7 +712,7 @@ vector<hew::uint2_t, Allocator>::vector(size_type n)
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>::vector(size_type n, const allocator_type& a)
+vector<uint2_t, Allocator>::vector(size_type n, const allocator_type& a)
     : begin_    (nullptr),
       size_     (0),
       cap_alloc_(0, static_cast<__storage_allocator>(a))
@@ -721,7 +725,7 @@ vector<hew::uint2_t, Allocator>::vector(size_type n, const allocator_type& a)
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>::vector(size_type n, const value_type& x)
+vector<uint2_t, Allocator>::vector(size_type n, const value_type& x)
     : begin_    (nullptr),
       size_     (0),
       cap_alloc_(0)
@@ -734,7 +738,7 @@ vector<hew::uint2_t, Allocator>::vector(size_type n, const value_type& x)
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>::vector(size_type n, const value_type& x, const allocator_type& a)
+vector<uint2_t, Allocator>::vector(size_type n, const value_type& x, const allocator_type& a)
     : begin_    (nullptr),
       size_     (0),
       cap_alloc_(0, static_cast<__storage_allocator>(a))
@@ -748,9 +752,9 @@ vector<hew::uint2_t, Allocator>::vector(size_type n, const value_type& x, const 
 
 template <class Allocator>
 template <class InputIterator>
-vector<hew::uint2_t, Allocator>::vector(InputIterator first, InputIterator last,
-       std::enable_if_t<hew::__is_input_iterator_v  <InputIterator> &&
-                       !hew::__is_forward_iterator_v<InputIterator>>*)
+vector<uint2_t, Allocator>::vector(InputIterator first, InputIterator last,
+       std::enable_if_t<detail::__is_input_iterator_v  <InputIterator> &&
+                       !detail::__is_forward_iterator_v<InputIterator>>*)
     : begin_    (nullptr),
       size_     (0),
       cap_alloc_(0)
@@ -771,9 +775,9 @@ vector<hew::uint2_t, Allocator>::vector(InputIterator first, InputIterator last,
 
 template <class Allocator>
 template <class InputIterator>
-vector<hew::uint2_t, Allocator>::vector(InputIterator first, InputIterator last, const allocator_type& a,
-       std::enable_if_t<hew::__is_input_iterator_v  <InputIterator> &&
-                       !hew::__is_forward_iterator_v<InputIterator>>*)
+vector<uint2_t, Allocator>::vector(InputIterator first, InputIterator last, const allocator_type& a,
+       std::enable_if_t<detail::__is_input_iterator_v  <InputIterator> &&
+                       !detail::__is_forward_iterator_v<InputIterator>>*)
     : begin_    (nullptr),
       size_     (0),
       cap_alloc_(0, static_cast<__storage_allocator>(a))
@@ -794,8 +798,8 @@ vector<hew::uint2_t, Allocator>::vector(InputIterator first, InputIterator last,
 
 template <class Allocator>
 template <class ForwardIterator>
-vector<hew::uint2_t, Allocator>::vector(ForwardIterator first, ForwardIterator last,
-                                        std::enable_if_t<hew::__is_forward_iterator_v<ForwardIterator>>*)
+vector<uint2_t, Allocator>::vector(ForwardIterator first, ForwardIterator last,
+                                        std::enable_if_t<detail::__is_forward_iterator_v<ForwardIterator>>*)
     : begin_    (nullptr),
       size_     (0),
       cap_alloc_(0)
@@ -810,8 +814,8 @@ vector<hew::uint2_t, Allocator>::vector(ForwardIterator first, ForwardIterator l
 
 template <class Allocator>
 template <class ForwardIterator>
-vector<hew::uint2_t, Allocator>::vector(ForwardIterator first, ForwardIterator last, const allocator_type& a,
-                                        std::enable_if_t<hew::__is_forward_iterator_v<ForwardIterator>>*)
+vector<uint2_t, Allocator>::vector(ForwardIterator first, ForwardIterator last, const allocator_type& a,
+                                        std::enable_if_t<detail::__is_forward_iterator_v<ForwardIterator>>*)
     : begin_    (nullptr),
       size_     (0),
       cap_alloc_(0, static_cast<__storage_allocator>(a))
@@ -825,7 +829,7 @@ vector<hew::uint2_t, Allocator>::vector(ForwardIterator first, ForwardIterator l
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>::vector(std::initializer_list<value_type> il)
+vector<uint2_t, Allocator>::vector(std::initializer_list<value_type> il)
     : begin_    (nullptr),
       size_     (0),
       cap_alloc_(0)
@@ -839,7 +843,7 @@ vector<hew::uint2_t, Allocator>::vector(std::initializer_list<value_type> il)
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>::vector(std::initializer_list<value_type> il, const allocator_type& a)
+vector<uint2_t, Allocator>::vector(std::initializer_list<value_type> il, const allocator_type& a)
     : begin_    (nullptr),
       size_     (0),
       cap_alloc_(0, static_cast<__storage_allocator>(a))
@@ -853,7 +857,7 @@ vector<hew::uint2_t, Allocator>::vector(std::initializer_list<value_type> il, co
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>::~vector()
+vector<uint2_t, Allocator>::~vector()
 {
     if (begin_ != nullptr)
         __storage_traits::deallocate(__alloc(), begin_, __cap());
@@ -861,7 +865,7 @@ vector<hew::uint2_t, Allocator>::~vector()
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>::vector(const vector& v)
+vector<uint2_t, Allocator>::vector(const vector& v)
     : begin_    (nullptr),
       size_     (0),
       cap_alloc_(0, __storage_traits::select_on_container_copy_construction(v.__alloc()))
@@ -874,7 +878,7 @@ vector<hew::uint2_t, Allocator>::vector(const vector& v)
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>::vector(const vector& v, const allocator_type& a)
+vector<uint2_t, Allocator>::vector(const vector& v, const allocator_type& a)
     : begin_    (nullptr),
       size_     (0),
       cap_alloc_(0, a)
@@ -887,8 +891,8 @@ vector<hew::uint2_t, Allocator>::vector(const vector& v, const allocator_type& a
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>&
-vector<hew::uint2_t, Allocator>::operator=(const vector& v)
+vector<uint2_t, Allocator>&
+vector<uint2_t, Allocator>::operator=(const vector& v)
 {
     if (this != &v)
     {
@@ -908,7 +912,7 @@ vector<hew::uint2_t, Allocator>::operator=(const vector& v)
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>::vector(vector&& v) noexcept
+vector<uint2_t, Allocator>::vector(vector&& v) noexcept
     : begin_    (v.begin_),
       size_     (v.size_),
       cap_alloc_(std::move(v.cap_alloc_))
@@ -919,7 +923,7 @@ vector<hew::uint2_t, Allocator>::vector(vector&& v) noexcept
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>::vector(vector&& v, const allocator_type& a)
+vector<uint2_t, Allocator>::vector(vector&& v, const allocator_type& a)
     : begin_    (nullptr),
       size_     (0),
       cap_alloc_(0, a)
@@ -940,9 +944,9 @@ vector<hew::uint2_t, Allocator>::vector(vector&& v, const allocator_type& a)
 }
 
 template <class Allocator>
-vector<hew::uint2_t, Allocator>&
-vector<hew::uint2_t, Allocator>::operator=(vector&& v)
-noexcept((hew::__is_noexcept_move_assign_container_v<Allocator, __alloc_traits>))
+vector<uint2_t, Allocator>&
+vector<uint2_t, Allocator>::operator=(vector&& v)
+noexcept((detail::__is_noexcept_move_assign_container_v<Allocator, __alloc_traits>))
 {
     __move_assign(v, std::bool_constant<
             __storage_traits::propagate_on_container_move_assignment::value>());
@@ -951,7 +955,7 @@ noexcept((hew::__is_noexcept_move_assign_container_v<Allocator, __alloc_traits>)
 
 template <class Allocator>
 void
-vector<hew::uint2_t, Allocator>::__move_assign(vector& c, std::false_type)
+vector<uint2_t, Allocator>::__move_assign(vector& c, std::false_type)
 {
     if (__alloc() != c.__alloc())
         assign(c.begin(), c.end());
@@ -961,7 +965,7 @@ vector<hew::uint2_t, Allocator>::__move_assign(vector& c, std::false_type)
 
 template <class Allocator>
 void
-vector<hew::uint2_t, Allocator>::__move_assign(vector& c, std::true_type)
+vector<uint2_t, Allocator>::__move_assign(vector& c, std::true_type)
 noexcept(std::is_nothrow_move_assignable_v<allocator_type>)
 {
     __vdeallocate();
@@ -975,7 +979,7 @@ noexcept(std::is_nothrow_move_assignable_v<allocator_type>)
 
 template <class Allocator>
 void
-vector<hew::uint2_t, Allocator>::assign(size_type n, const value_type& x)
+vector<uint2_t, Allocator>::assign(size_type n, const value_type& x)
 {
     size_ = 0;
     if (n > 0)
@@ -999,10 +1003,10 @@ template <class Allocator>
 template <class InputIterator>
 std::enable_if_t
 <
-    hew::__is_input_iterator_v  <InputIterator> &&
-   !hew::__is_forward_iterator_v<InputIterator>
+    detail::__is_input_iterator_v  <InputIterator> &&
+   !detail::__is_forward_iterator_v<InputIterator>
 >
-vector<hew::uint2_t, Allocator>::assign(InputIterator first, InputIterator last)
+vector<uint2_t, Allocator>::assign(InputIterator first, InputIterator last)
 {
     clear();
     for (; first != last; ++first)
@@ -1013,9 +1017,9 @@ template <class Allocator>
 template <class ForwardIterator>
 std::enable_if_t
 <
-    hew::__is_forward_iterator_v<ForwardIterator>
+    detail::__is_forward_iterator_v<ForwardIterator>
 >
-vector<hew::uint2_t, Allocator>::assign(ForwardIterator first, ForwardIterator last)
+vector<uint2_t, Allocator>::assign(ForwardIterator first, ForwardIterator last)
 {
     clear();
     difference_type ns = std::distance(first, last);
@@ -1034,7 +1038,7 @@ vector<hew::uint2_t, Allocator>::assign(ForwardIterator first, ForwardIterator l
 
 template <class Allocator>
 void
-vector<hew::uint2_t, Allocator>::reserve(size_type n)
+vector<uint2_t, Allocator>::reserve(size_type n)
 {
     if (n > capacity())
     {
@@ -1048,7 +1052,7 @@ vector<hew::uint2_t, Allocator>::reserve(size_type n)
 
 template <class Allocator>
 void
-vector<hew::uint2_t, Allocator>::shrink_to_fit() noexcept
+vector<uint2_t, Allocator>::shrink_to_fit() noexcept
 {
     if (__external_cap_to_internal(size()) > __cap())
     {
@@ -1063,8 +1067,8 @@ vector<hew::uint2_t, Allocator>::shrink_to_fit() noexcept
 }
 
 template <class Allocator>
-typename vector<hew::uint2_t, Allocator>::reference
-vector<hew::uint2_t, Allocator>::at(size_type n)
+typename vector<uint2_t, Allocator>::reference
+vector<uint2_t, Allocator>::at(size_type n)
 {
     if (n >= size())
         this->__throw_out_of_range();
@@ -1072,8 +1076,8 @@ vector<hew::uint2_t, Allocator>::at(size_type n)
 }
 
 template <class Allocator>
-typename vector<hew::uint2_t, Allocator>::const_reference
-vector<hew::uint2_t, Allocator>::at(size_type n) const
+typename vector<uint2_t, Allocator>::const_reference
+vector<uint2_t, Allocator>::at(size_type n) const
 {
     if (n >= size())
         this->__throw_out_of_range();
@@ -1082,7 +1086,7 @@ vector<hew::uint2_t, Allocator>::at(size_type n) const
 
 template <class Allocator>
 void
-vector<hew::uint2_t, Allocator>::push_back(const value_type& x)
+vector<uint2_t, Allocator>::push_back(const value_type& x)
 {
     if (this->size_ == this->capacity())
         reserve(__recommend(this->size_ + 1));
@@ -1091,8 +1095,8 @@ vector<hew::uint2_t, Allocator>::push_back(const value_type& x)
 }
 
 template <class Allocator>
-typename vector<hew::uint2_t, Allocator>::iterator
-vector<hew::uint2_t, Allocator>::insert(const_iterator position, const value_type& x)
+typename vector<uint2_t, Allocator>::iterator
+vector<uint2_t, Allocator>::insert(const_iterator position, const value_type& x)
 {
     iterator r;
     if (size() < capacity())
@@ -1116,8 +1120,8 @@ vector<hew::uint2_t, Allocator>::insert(const_iterator position, const value_typ
 }
 
 template <class Allocator>
-typename vector<hew::uint2_t, Allocator>::iterator
-vector<hew::uint2_t, Allocator>::insert(const_iterator position, size_type n, const value_type& x)
+typename vector<uint2_t, Allocator>::iterator
+vector<uint2_t, Allocator>::insert(const_iterator position, size_type n, const value_type& x)
 {
     iterator r;
     size_type c = capacity();
@@ -1145,11 +1149,11 @@ template <class Allocator>
 template <class InputIterator>
 std::enable_if_t
 <
-    hew::__is_input_iterator_v  <InputIterator> &&
-   !hew::__is_forward_iterator_v<InputIterator>,
-    typename vector<hew::uint2_t, Allocator>::iterator
+    detail::__is_input_iterator_v  <InputIterator> &&
+   !detail::__is_forward_iterator_v<InputIterator>,
+    typename vector<uint2_t, Allocator>::iterator
 >
-vector<hew::uint2_t, Allocator>::insert(const_iterator position, InputIterator first, InputIterator last)
+vector<uint2_t, Allocator>::insert(const_iterator position, InputIterator first, InputIterator last)
 {
     difference_type off = position - begin();
     auto p = __const_iterator_cast(position);
@@ -1186,10 +1190,10 @@ template <class Allocator>
 template <class ForwardIterator>
 std::enable_if_t
 <
-    hew::__is_forward_iterator_v<ForwardIterator>,
-    typename vector<hew::uint2_t, Allocator>::iterator
+    detail::__is_forward_iterator_v<ForwardIterator>,
+    typename vector<uint2_t, Allocator>::iterator
 >
-vector<hew::uint2_t, Allocator>::insert(const_iterator position, ForwardIterator first, ForwardIterator last)
+vector<uint2_t, Allocator>::insert(const_iterator position, ForwardIterator first, ForwardIterator last)
 {
     const difference_type n_signed = std::distance(first, last);
     assert(n_signed >= 0 && "invalid range specified");
@@ -1217,8 +1221,8 @@ vector<hew::uint2_t, Allocator>::insert(const_iterator position, ForwardIterator
 }
 
 template <class Allocator>
-typename vector<hew::uint2_t, Allocator>::iterator
-vector<hew::uint2_t, Allocator>::erase(const_iterator position)
+typename vector<uint2_t, Allocator>::iterator
+vector<uint2_t, Allocator>::erase(const_iterator position)
 {
     auto r = __const_iterator_cast(position);
     std::copy(position + 1, this->cend(), r);
@@ -1227,8 +1231,8 @@ vector<hew::uint2_t, Allocator>::erase(const_iterator position)
 }
 
 template <class Allocator>
-typename vector<hew::uint2_t, Allocator>::iterator
-vector<hew::uint2_t, Allocator>::erase(const_iterator first, const_iterator last)
+typename vector<uint2_t, Allocator>::iterator
+vector<uint2_t, Allocator>::erase(const_iterator first, const_iterator last)
 {
     auto r = __const_iterator_cast(first);
     difference_type d = last - first;
@@ -1239,7 +1243,7 @@ vector<hew::uint2_t, Allocator>::erase(const_iterator first, const_iterator last
 
 template <class Allocator>
 void
-vector<hew::uint2_t, Allocator>::swap(vector& x) noexcept
+vector<uint2_t, Allocator>::swap(vector& x) noexcept
 {
     std::swap(this->begin_, x.begin_);
     std::swap(this->size_, x.size_);
@@ -1250,7 +1254,7 @@ vector<hew::uint2_t, Allocator>::swap(vector& x) noexcept
 
 template <class Allocator>
 void
-vector<hew::uint2_t, Allocator>::resize(size_type sz, value_type x)
+vector<uint2_t, Allocator>::resize(size_type sz, value_type x)
 {
     size_type cs = size();
     if (cs < sz)
@@ -1279,18 +1283,18 @@ vector<hew::uint2_t, Allocator>::resize(size_type sz, value_type x)
 
 template <class Allocator>
 void
-vector<hew::uint2_t, Allocator>::flip() noexcept
+vector<uint2_t, Allocator>::flip() noexcept
 {
     // do middle whole words
     size_type n = size_;
     __storage_pointer p = begin_;
-    for (; n >= bases_per_word; ++p, n -= bases_per_word)
+    for (; n >= uint2_per_word; ++p, n -= uint2_per_word)
         *p = ~*p;
 
     // do last partial word
     if (n > 0)
     {
-        __storage_type m = ~__storage_type(0) >> (bases_per_word - n);
+        __storage_type m = ~__storage_type(0) >> (uint2_per_word - n);
         __storage_type b = *p & m;
         *p &= ~m;
         *p |= ~b & m;
@@ -1299,7 +1303,7 @@ vector<hew::uint2_t, Allocator>::flip() noexcept
 
 template <class Allocator>
 bool
-vector<hew::uint2_t, Allocator>::__invariants() const
+vector<uint2_t, Allocator>::__invariants() const
 {
     if (this->begin_ == nullptr)
     {
@@ -1318,53 +1322,54 @@ vector<hew::uint2_t, Allocator>::__invariants() const
 
 template <class Allocator>
 bool
-operator==(const vector<hew::uint2_t, Allocator>& x, const vector<hew::uint2_t, Allocator>& y)
+operator==(const vector<uint2_t, Allocator>& x, const vector<uint2_t, Allocator>& y)
 {
-    const typename vector<hew::uint2_t, Allocator>::size_type sz = x.size();
+    const typename vector<uint2_t, Allocator>::size_type sz = x.size();
     return sz == y.size() && std::equal(x.begin(), x.end(), y.begin());
 }
 
 template <class Allocator>
 bool
-operator!=(const vector<hew::uint2_t, Allocator>& x, const vector<hew::uint2_t, Allocator>& y)
+operator!=(const vector<uint2_t, Allocator>& x, const vector<uint2_t, Allocator>& y)
 {
     return !(x == y);
 }
 
 template <class Allocator>
 bool
-operator< (const vector<hew::uint2_t, Allocator>& x, const vector<hew::uint2_t, Allocator>& y)
+operator< (const vector<uint2_t, Allocator>& x, const vector<uint2_t, Allocator>& y)
 {
     return std::lexicographical_compare(x.begin(), x.end(), y.begin(), y.end());
 }
 
 template <class Allocator>
 bool
-operator> (const vector<hew::uint2_t, Allocator>& x, const vector<hew::uint2_t, Allocator>& y)
+operator> (const vector<uint2_t, Allocator>& x, const vector<uint2_t, Allocator>& y)
 {
     return y < x;
 }
 
 template <class Allocator>
 bool
-operator>=(const vector<hew::uint2_t, Allocator>& x, const vector<hew::uint2_t, Allocator>& y)
+operator>=(const vector<uint2_t, Allocator>& x, const vector<uint2_t, Allocator>& y)
 {
     return !(x < y);
 }
 
 template <class Allocator>
 bool
-operator<=(const vector<hew::uint2_t, Allocator>& x, const vector<hew::uint2_t, Allocator>& y)
+operator<=(const vector<uint2_t, Allocator>& x, const vector<uint2_t, Allocator>& y)
 {
     return !(y < x);
 }
 
 template <class Allocator>
 void
-swap(vector<hew::uint2_t, Allocator>& x, vector<hew::uint2_t, Allocator>& y)
+swap(vector<uint2_t, Allocator>& x, vector<uint2_t, Allocator>& y)
 noexcept(noexcept(x.swap(y)))
 {
     x.swap(y);
 }
 
 }
+
