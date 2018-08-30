@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <cstdint>
 #include <type_traits>
 #include <iterator>
@@ -7,8 +8,6 @@
 #include <climits>
 #include <boost/compressed_pair.hpp>
 #include <algorithm>
-#include <cassert>
-#include <vector>
 
 namespace std
 {
