@@ -148,6 +148,11 @@ public:
 
 namespace std
 {
+    struct uint2_t;
+}
+
+namespace detail
+{
     typedef uint8_t uint2_t;
 }
 
@@ -171,13 +176,13 @@ class __uint2_reference
     friend class __uint2_const_reference<Cp>;
     friend class __uint2_iterator<Cp, false>;
 public:
-    operator std::uint2_t() const noexcept
-    { return static_cast<std::uint2_t> (*seg_ >> shift_ & 3); }
+    operator uint2_t() const noexcept
+    { return static_cast<uint2_t> (*seg_ >> shift_ & 3); }
 
-    std::uint2_t operator~() const noexcept
-    { return static_cast<std::uint2_t>((*seg_ >> shift_ ^ 3) & 3); }
+    uint2_t operator~() const noexcept
+    { return static_cast<uint2_t>((*seg_ >> shift_ ^ 3) & 3); }
 
-    __uint2_reference& operator=(std::uint2_t x) noexcept
+    __uint2_reference& operator=(uint2_t x) noexcept
     {
         *seg_ &= ~(__storage_type(3) << shift_);
         *seg_ |=   __storage_type(x) << shift_;
@@ -185,7 +190,7 @@ public:
     }
 
     __uint2_reference& operator=(const __uint2_reference& x) noexcept
-    { return operator=(static_cast<std::uint2_t>(x)); }
+    { return operator=(static_cast<uint2_t>(x)); }
 
     void flip() noexcept {*seg_ ^= (__storage_type(3) << shift_);}
     __uint2_iterator<Cp, false> operator&() const noexcept
@@ -211,8 +216,8 @@ public:
     __uint2_const_reference(const __uint2_reference<Cp>& x) noexcept
         : seg_(x.seg_), shift_(x.shift_) {}
 
-    operator std::uint2_t() const noexcept
-    { return static_cast<std::uint2_t>(*seg_ >> shift_ & 3); }
+    operator uint2_t() const noexcept
+    { return static_cast<uint2_t>(*seg_ >> shift_ & 3); }
 
     __uint2_iterator<Cp, true> operator&() const noexcept
     { return __uint2_iterator<Cp, true>(seg_, shift_ / 2); }
@@ -229,7 +234,7 @@ class __uint2_iterator
 {
 public:
     typedef typename Cp::difference_type                                difference_type;
-    typedef std::uint2_t                                                value_type;
+    typedef uint2_t                                                     value_type;
     typedef __uint2_iterator                                            pointer;
     typedef std::conditional_t<IsConst, __uint2_const_reference<Cp>, 
                                         __uint2_reference<Cp>>          reference;
@@ -364,7 +369,7 @@ template <class Cp>
 void
 swap(__uint2_reference<Cp> x, __uint2_reference<Cp> y) noexcept
 {
-    std::uint2_t t = x;
+    uint2_t t = x;
     x = y;
     y = t;
 }
@@ -373,16 +378,16 @@ template <class Cp, class Dp>
 void
 swap(__uint2_reference<Cp> x, __uint2_reference<Dp> y) noexcept
 {
-    std::uint2_t t = x;
+    uint2_t t = x;
     x = y;
     y = t;
 }
 
 template <class Cp>
 void
-swap(__uint2_reference<Cp> x, std::uint2_t& y) noexcept
+swap(__uint2_reference<Cp> x, uint2_t& y) noexcept
 {
-    std::uint2_t t = x;
+    uint2_t t = x;
     x = y;
     y = t;
 }
@@ -445,7 +450,7 @@ class vector<uint2_t, Allocator>
 {
 public:
     typedef vector                                   __self;
-    typedef uint2_t                                  value_type;
+    typedef detail::uint2_t                          value_type;
     typedef Allocator                                allocator_type;
     typedef std::allocator_traits<allocator_type>    __alloc_traits;
     typedef typename __alloc_traits::size_type       size_type;
@@ -1508,4 +1513,3 @@ noexcept(noexcept(x.swap(y)))
 }
 
 }
-
