@@ -1,3 +1,7 @@
+# std::vector<std::uint2_t>
+
+std::vector<std::uint2_t> is a space-efficient template specializations of standard library [std::vector](https://en.cppreference.com/w/cpp/container/vector) for the 2-bit values.
+
 ## Example Usage
 ```c++
 #include <iostream>
