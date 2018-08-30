@@ -7,6 +7,12 @@
 namespace std
 {
 
+template <class T, class Allocator = allocator<T> >
+class vector;
+
+template <class Allocator = allocator<T> >
+class vector<bool, Allocator>;
+
 template <class Allocator = allocator<T> >
 class vector<uint2_t, Allocator>
 {
