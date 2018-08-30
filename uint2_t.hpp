@@ -2,6 +2,11 @@
 
 /*
 
+    vector<uint2_t> synopsis
+
+namespace std
+{
+
 template <class Allocator = allocator<T> >
 class vector<uint2_t, Allocator>
 {
