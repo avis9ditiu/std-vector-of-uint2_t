@@ -11,7 +11,7 @@ std::vector&lt;std::uint2_t&gt; is a space-efficient template specializations of
 int main()
 {
     std::vector<std::uint2_t> v = {0, 1, 2, 3, 2, 1, 0};
-    for (auto i : v)
+    for (const auto& i : v)
         std::cout << static_cast<unsigned>(i) << ' ';
     std::cout << '\n';
 }
